@@ -1,0 +1,91 @@
+/* Dark theme — minimal, focused. */
+:root {
+  --bg: #0d0d0f;
+  --surface: #16161a;
+  --border: #2a2a30;
+  --accent: #6e56cf;
+  --text: #e8e8ed;
+  --muted: #8888a0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#app {
+  width: 100%;
+  max-width: 500px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.orb-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 2rem;
+}
+
+.orb {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #8a7cf8, var(--accent), #3d2e8a);
+  animation: pulse 3s ease-in-out infinite;
+}
+
+.orb-ring {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  opacity: 0.4;
+  animation: ring 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.85; }
+}
+@keyframes ring {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.08); opacity: 0.2; }
+}
+
+h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+#status { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+
+.controls { display: flex; gap: 1rem; justify-content: center; margin-bottom: 1.5rem; }
+
+button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+button:hover { border-color: var(--accent); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+button.active { background: var(--accent); border-color: var(--accent); }
+
+#transcript-display {
+  min-height: 60px;
+  padding: 1rem;
+  background: var(--surface);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  color: var(--muted);
+  white-space: pre-wrap;
+  text-align: left;
+}

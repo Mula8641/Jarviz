@@ -1,0 +1,5 @@
+server.py  # See below (Stage 1 entry)
+config.json  # Created from config.example.json after copy
+config.example.json  # Template with all keys/paths
+requirements.txt  # Python deps
+.env  # Optional: MINIMAX_API_KEY, ELEVENLABS_API_KEY, etc.

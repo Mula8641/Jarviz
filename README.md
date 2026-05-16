@@ -10,34 +10,27 @@ Personal AI voice assistant for Windows. Speak, listen, control your browser and
 - **Backend:** FastAPI + WebSockets
 - **Platform:** Windows
 
-## Quick Start — One Command
+---
 
-Double-click `launch-everything.bat` and everything installs and starts automatically.
+## 🚀 One-Command Setup (克隆并自动启动)
 
-Or manual setup:
+Open **PowerShell** or **Command Prompt** and run:
 
-```bash
-# 1. Clone
-git clone https://github.com/Mula8641/Jarviz.git
-cd voice-assistant
-
-# 2. Install deps
-pip install -r requirements.txt
-playwright install chromium
-
-# 3. Configure
-cp config.example.json config.json
-# Edit config.json with your API keys, or add them via the Settings UI
-
-# 4. Run
-python server.py
-
-# 5. Open browser
-# Chrome → http://localhost:8340
-# Click mic to speak, or type in text mode
+```powershell
+git clone https://github.com/Mula8641/Jarviz.git && cd Jarviz && launch-everything.bat
 ```
 
-> **First run:** `launch-everything.bat` will create a virtual environment, install all dependencies, download Chromium, and start the server. No manual steps needed after that.
+That's it. It will:
+1. Clone the repo
+2. Create a virtual environment
+3. Install all dependencies
+4. Download Chromium
+5. Start the server
+6. Open **http://localhost:8340** in your browser
+
+> First run only: add your API keys in the Settings UI (⚙️ tab) after the server starts. Restart after saving.
+
+---
 
 ## Features
 
@@ -51,3 +44,21 @@ python server.py
 - 🤖 **Ollama fallback** — works offline when MiniMax rate limits
 - 🚀 **One-trigger launch** — launch everything with one button
 - ⚙️ **Settings UI** — add API keys directly from the browser
+
+## Requirements
+
+- Python 3.10+ (add to PATH during install)
+- Windows 10/11
+- Google Chrome
+- MiniMax API key
+- ElevenLabs API key
+
+## Troubleshooting
+
+**Python not found?** Download from [python.org](https://python.org) — check "Add Python to PATH" during install.
+
+**Mic not working?** Make sure Chrome has microphone permissions. Allow it when the browser asks.
+
+**TTS not playing?** Check your system volume and that ElevenLabs API key is set in Settings → ⚙️ → Save → restart server.
+
+**"Launch Everything" stuck?** Run PowerShell as Administrator and try again.

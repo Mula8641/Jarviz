@@ -1,5 +1,19 @@
-server.py  # See below (Stage 1 entry)
-config.json  # Created from config.example.json after copy
-config.example.json  # Template with all keys/paths
-requirements.txt  # Python deps
-.env  # Optional: MINIMAX_API_KEY, ELEVENLABS_API_KEY, etc.
+# Bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+.venv/
+
+# Config (contains secrets — generated after setup)
+config.json
+.env
+
+# Logs and runtime state
+logs/
+memory.db
+
+# Playwright / browser data
+.playwright/

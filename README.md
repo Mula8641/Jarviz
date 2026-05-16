@@ -17,7 +17,9 @@ Personal AI voice assistant for Windows. Speak, listen, control your browser and
 Open **PowerShell** or **Command Prompt** and run:
 
 ```powershell
-git clone https://github.com/Mula8641/Jarviz.git && cd Jarviz && launch-everything.bat
+git clone https://github.com/Mula8641/Jarviz.git
+cd Jarviz
+.\launch-everything.bat
 ```
 
 That's it. It will:

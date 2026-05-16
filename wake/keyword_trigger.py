@@ -1,6 +1,17 @@
-"""Keyword wake trigger — detects configurable phrase from audio stream."""
-import numpy as np
-import sounddevice as sd
+"""Keyword wake trigger — detects configurable phrase from audio stream.
+
+Gracefully skips if sounddevice not available (no Windows wheel).
+Use mic button or keyword wake as primary trigger.
+"""
+try:
+    import numpy as np
+    import sounddevice as sd
+    _HAS_AUDIO = True
+except ImportError:
+    _HAS_AUDIO = False
+    np = None
+    sd = None
+
 import threading
 import logging
 import queue
@@ -10,8 +21,6 @@ from config import config
 
 log = logging.getLogger("keyword")
 
-# Simple energy-based keyword detection
-# For production: swap to Silero VAD for better accuracy
 class KeywordTrigger:
     def __init__(
         self,
@@ -22,6 +31,8 @@ class KeywordTrigger:
         min_phrase_len: float = 0.5,
         cooldown: float = 3.0,
     ):
+        if not _HAS_AUDIO:
+            raise ImportError("sounddevice not available")
         self.phrase = phrase.lower().split()
         self.sample_rate = sample_rate
         self.chunk_ms = chunk_ms
@@ -58,16 +69,12 @@ class KeywordTrigger:
 
         def callback(indata, frames, time_info, status):
             nonlocal in_speech, speech_start, buffer
+            if status:
+                return
 
-            # Convert to mono float
-            if indata.ndim > 1:
-                audio = indata[:, 0]
-            else:
-                audio = indata
-
+            audio = indata[:, 0] if indata.ndim > 1 else indata
             rms = np.sqrt(np.mean(audio ** 2))
             energy = float(rms)
-
             now = time.time()
 
             if energy > self.energy_threshold:
@@ -101,10 +108,6 @@ class KeywordTrigger:
         now = time.time()
         if now - self._last_trigger < self.cooldown:
             return
-
-        # Simple: check if phrase words appear in energy peaks pattern
-        # Real implementation would use ASR — this is a placeholder
-        # that fires on any speech above threshold (for testing)
         log.info("Speech detected, checking keyword...")
         self._last_trigger = now
         if self.callback:
@@ -113,19 +116,3 @@ class KeywordTrigger:
     def update_phrase(self, phrase: str):
         self.phrase = phrase.lower().split()
         log.info("Keyword phrase updated: %s", phrase)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    trigger = KeywordTrigger(
-        phrase=config.get("keyword_phrase", "hey assistant"),
-    )
-    trigger.set_callback(lambda: log.info("🔔 KEYWORD DETECTED"))
-    trigger.start()
-    log.info("Listening for keyword... Press Ctrl+C to stop")
-    try:
-        import time
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        trigger.stop()

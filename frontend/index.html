@@ -138,6 +138,48 @@
       <div class="panel-content" id="panel-settings">
         <div class="settings-panel">
           <div class="setting-group">
+            <div class="setting-label">API Keys</div>
+            <div class="api-key-field">
+              <label>MiniMax API Key</label>
+              <div class="key-input-row">
+                <input type="password" id="key-minimax" placeholder="sk-..." autocomplete="off" />
+                <button class="save-key-btn" data-key="minimax_api_key">Save</button>
+              </div>
+            </div>
+            <div class="api-key-field">
+              <label>ElevenLabs API Key</label>
+              <div class="key-input-row">
+                <input type="password" id="key-elevenlabs" placeholder="sk_..." autocomplete="off" />
+                <button class="save-key-btn" data-key="elevenlabs_api_key">Save</button>
+              </div>
+            </div>
+            <div class="api-key-field">
+              <label>ElevenLabs Voice ID</label>
+              <div class="key-input-row">
+                <input type="password" id="key-voice" placeholder="EXAVIT..." autocomplete="off" />
+                <button class="save-key-btn" data-key="elevenlabs_voice_id">Save</button>
+              </div>
+            </div>
+            <div id="key-save-status" class="key-status"></div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Profile</div>
+            <div class="api-key-field">
+              <label>Your Name</label>
+              <div class="key-input-row">
+                <input type="text" id="cfg-username" placeholder="Jarviz" />
+                <button class="save-key-btn" data-key="user_name">Save</button>
+              </div>
+            </div>
+            <div class="api-key-field">
+              <label>City (for weather)</label>
+              <div class="key-input-row">
+                <input type="text" id="cfg-city" placeholder="Berlin" />
+                <button class="save-key-btn" data-key="city">Save</button>
+              </div>
+            </div>
+          </div>
+          <div class="setting-group">
             <div class="setting-label">Wake Triggers</div>
             <div class="setting-item">
               <span class="setting-name">🎤 Mic Button</span>
@@ -148,7 +190,7 @@
               <button class="toggle active" id="toggle-clap"></button>
             </div>
             <div class="setting-item">
-              <span class="setting-name">🎵 Keyword Wake ("Hey Assistant")</span>
+              <span class="setting-name">🎵 Keyword Wake</span>
               <button class="toggle" id="toggle-keyword"></button>
             </div>
           </div>

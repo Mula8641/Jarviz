@@ -278,6 +278,59 @@ async def vision_describe(body: VisionRequest):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+class ConfigSaveRequest(BaseModel):
+    minimax_api_key: str = ""
+    elevenlabs_api_key: str = ""
+    elevenlabs_voice_id: str = ""
+    user_name: str = ""
+    city: str = ""
+    clap_threshold: float = 0.15
+    keyword_phrase: str = ""
+    keyword_enabled: bool = False
+
+@app.post("/config/save")
+async def save_config(body: ConfigSaveRequest):
+    """Save API keys and settings from UI — writes to config.json."""
+    import json
+    from pathlib import Path
+    config_path = Path(__file__).parent / "config.json"
+
+    # Load existing or example
+    example_path = Path(__file__).parent / "config.example.json"
+    with open(example_path) as f:
+        data = json.load(f)
+
+    # Update with new values
+    update_fields = body.model_dump()
+    for key, value in update_fields.items():
+        if value != "" and value is not None:
+            data[key] = value
+
+    # Mask keys in response
+    safe_data = dict(data)
+    for secret_key in ["minimax_api_key", "elevenlabs_api_key", "elevenlabs_voice_id"]:
+        if safe_data.get(secret_key):
+            safe_data[secret_key] = safe_data[secret_key][:8] + "***"
+
+    with open(config_path, "w") as f:
+        json.dump(data, f, indent=2)
+
+    log.info("Config saved from UI")
+    return {"status": "ok", "config": safe_data}
+
+
+@app.get("/config")
+async def get_config():
+    """Return current config (secrets masked)."""
+    from config import config as cfg
+    import copy
+    safe = dict(cfg)
+    for key in ["minimax_api_key", "elevenlabs_api_key", "elevenlabs_voice_id"]:
+        if safe.get(key):
+            safe[key] = safe[key][:8] + "***"
+    return safe
+
+
 @app.post("/workspace/launch")
 async def workspace_launch(body: WorkspaceLaunchRequest):
     import subprocess

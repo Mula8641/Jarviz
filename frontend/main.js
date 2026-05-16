@@ -326,3 +326,45 @@ function log(msg) { console.log("[Jarviz UI] " + msg); }
 initSpeech();
 connectWS();
 log("UI initialized");
+// ── API Key Saving ────────────────────────────────────────────────────────────
+document.querySelectorAll(".save-key-btn").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const keyField = btn.dataset.key;
+    const input = document.getElementById("key-" + (
+      keyField === "minimax_api_key" ? "minimax" :
+      keyField === "elevenlabs_api_key" ? "elevenlabs" :
+      keyField === "elevenlabs_voice_id" ? "voice" :
+      keyField === "user_name" ? "username" :
+      keyField === "city" ? "city" : ""
+    ));
+
+    if (!input) return;
+    const value = input.value.trim();
+
+    const payload = { [keyField]: value };
+
+    try {
+      const res = await fetch("/config/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      const statusEl = document.getElementById("key-save-status");
+      if (data.status === "ok") {
+        statusEl.textContent = "Saved! Restart server to apply.";
+        statusEl.classList.remove("error");
+        btn.classList.add("saved");
+        setTimeout(() => btn.classList.remove("saved"), 2000);
+      } else {
+        statusEl.textContent = "Failed to save config.";
+        statusEl.classList.add("error");
+      }
+    } catch (e) {
+      const statusEl = document.getElementById("key-save-status");
+      statusEl.textContent = "Error: " + e.message;
+      statusEl.classList.add("error");
+    }
+  });
+});

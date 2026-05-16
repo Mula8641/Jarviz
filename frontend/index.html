@@ -14,6 +14,23 @@
     </div>
     <h1>Voice Assistant</h1>
     <p id="status">Initializing...</p>
+
+    <!-- Mode toggle -->
+    <div class="mode-toggle">
+      <button id="mode-btn" class="mode-voice active" title="Voice mode">
+        🎤 Voice
+      </button>
+      <button id="mode-btn-text" class="mode-text" title="Text mode">
+        ⌨️ Text
+      </button>
+    </div>
+
+    <!-- Text input (hidden by default) -->
+    <div id="text-panel" class="hidden">
+      <input type="text" id="text-input" placeholder="Type your command here..." autocomplete="off" />
+      <button id="text-send-btn">Send</button>
+    </div>
+
     <div class="controls">
       <button id="mic-btn" disabled>🎤 Speak</button>
       <button id="mute-btn" class="mute-off" disabled>Mute 🔇</button>

@@ -1,5 +1,6 @@
 """Voice Assistant server — FastAPI + WebSocket hub."""
 import asyncio
+import atexit
 import base64
 import logging
 from contextlib import asynccontextmanager
@@ -26,12 +27,9 @@ conversation = ConversationContext()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Start clap trigger in background thread
-    trigger_thread = None
+    # Clap trigger
     try:
         from wake.clap_trigger import ClapTrigger
-        from wake.trigger_server import start_trigger_server
-
         trigger = ClapTrigger(
             threshold=config.get("clap_threshold", 0.15),
             max_gap=config.get("clap_max_gap", 1.2),
@@ -39,18 +37,37 @@ async def lifespan(app: FastAPI):
         trigger.set_callback(lambda: _trigger_wake())
         trigger.start()
         log.info("Clap trigger started")
-
-        stop_server = start_trigger_server(callback=lambda msg: _trigger_wake())
-        app.state.stop_trigger = stop_server
         app.state.clap_trigger = trigger
     except Exception as e:
-        log.warning("Could not start wake system: %s", e)
+        log.warning("Could not start clap trigger: %s", e)
+
+    # Keyword trigger (optional)
+    try:
+        if config.get("keyword_enabled", False):
+            from wake.keyword_trigger import KeywordTrigger
+            kw_trigger = KeywordTrigger(
+                phrase=config.get("keyword_phrase", "hey assistant"),
+            )
+            kw_trigger.set_callback(lambda: _trigger_wake())
+            kw_trigger.start()
+            log.info("Keyword trigger started: '%s'", config.get("keyword_phrase"))
+            app.state.keyword_trigger = kw_trigger
+        else:
+            log.info("Keyword trigger disabled (keyword_enabled=false)")
+    except Exception as e:
+        log.warning("Could not start keyword trigger: %s", e)
+
+    # UDP trigger server
+    stop_server = start_trigger_server(callback=lambda msg: _trigger_wake())
+    app.state.stop_trigger = stop_server
 
     yield
 
     # Shutdown
     if hasattr(app.state, "clap_trigger"):
         app.state.clap_trigger.stop()
+    if hasattr(app.state, "keyword_trigger"):
+        app.state.keyword_trigger.stop()
     if hasattr(app.state, "stop_trigger"):
         app.state.stop_trigger()
 
@@ -72,6 +89,19 @@ async def _send_greeting(ws: WebSocket):
         await ws.send_json({"type": "status", "text": "Wake triggered — listening"})
     except Exception:
         pass
+
+def _save_session_facts():
+    """On shutdown: extract notable facts from recent conversation."""
+    try:
+        from memory import get_conversation, extract_and_store_facts
+        conv = get_conversation(limit=30)
+        if conv:
+            extract_and_store_facts(conv)
+            log.info("Session facts saved on shutdown")
+    except Exception as e:
+        log.warning("Could not save session facts: %s", e)
+
+atexit.register(_save_session_facts)
 
 # --- FastAPI App ---
 app = FastAPI(title="Voice Assistant", lifespan=lifespan)

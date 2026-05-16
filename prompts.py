@@ -5,6 +5,15 @@ _USER = config.get("user_name", "User")
 _CITY = config.get("city", "Berlin")
 
 def system_prompt() -> str:
+    user_facts = ""
+    try:
+        from memory import get_facts_for_prompt
+        user_facts = get_facts_for_prompt()
+    except Exception:
+        pass
+
+    facts_block = f"\n\nKnown user facts:\n{user_facts}" if user_facts else ""
+
     return f"""You are a helpful, calm, and concise voice assistant.
 
 Your personality:
@@ -19,7 +28,7 @@ describe what's on screen, launch applications, and have natural conversations.
 Context:
 - User's name: {_USER}
 - User's city: {_CITY} (for weather queries)
-- Current date: built from system time
+- Current date: built from system time{facts_block}
 
 When asked about weather: use the city context above.
 

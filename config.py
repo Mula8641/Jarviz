@@ -24,6 +24,8 @@ def load():
     data["city"] = os.getenv("CITY", data.get("city", "Berlin"))
     data["clap_threshold"] = float(os.getenv("CLAP_THRESHOLD", data.get("clap_threshold", 0.15)))
     data["clap_max_gap"] = float(os.getenv("CLAP_MAX_GAP", data.get("clap_max_gap", 1.2)))
+    data["keyword_phrase"] = os.getenv("KEYWORD_PHRASE", data.get("keyword_phrase", "hey assistant"))
+    data["keyword_enabled"] = os.getenv("KEYWORD_ENABLED", str(data.get("keyword_enabled", False))).lower() in ("true", "1", "yes")
     return data
 
 config = load()

@@ -78,6 +78,51 @@ button:hover { border-color: var(--accent); }
 button:disabled { opacity: 0.4; cursor: not-allowed; }
 button.active { background: var(--accent); border-color: var(--accent); }
 
+/* Mode toggle */
+.mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+.mode-toggle button {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  opacity: 0.5;
+}
+.mode-toggle button.active {
+  opacity: 1;
+  background: var(--surface);
+  border-color: var(--accent);
+}
+
+/* Text input panel */
+#text-panel {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  justify-content: center;
+}
+#text-panel.hidden { display: none; }
+
+#text-input {
+  flex: 1;
+  max-width: 320px;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+}
+#text-input:focus { outline: none; border-color: var(--accent); }
+
+#text-send-btn {
+  padding: 0.75rem 1rem;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 #transcript-display {
   min-height: 60px;
   padding: 1rem;

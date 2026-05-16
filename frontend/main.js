@@ -1,12 +1,18 @@
-/* Voice Assistant — Frontend: WebSocket + Web Speech API */
+/* Voice Assistant — Frontend: WebSocket + Web Speech API + Text Input */
 let ws = null;
 let recognition = null;
 let muted = false;
 let audioCtx = null;
+let mode = "voice";  // "voice" | "text"
 
 const status = document.getElementById("status");
 const micBtn = document.getElementById("mic-btn");
 const muteBtn = document.getElementById("mute-btn");
+const modeBtn = document.getElementById("mode-btn");
+const modeBtnText = document.getElementById("mode-btn-text");
+const textPanel = document.getElementById("text-panel");
+const textInput = document.getElementById("text-input");
+const textSendBtn = document.getElementById("text-send-btn");
 const transcriptDisplay = document.getElementById("transcript-display");
 
 function connect() {
@@ -14,8 +20,10 @@ function connect() {
   ws = new WebSocket(`${protocol}//${location.host}/ws`);
 
   ws.onopen = () => {
-    status.textContent = "Connected — click mic to speak";
-    micBtn.disabled = false;
+    status.textContent = mode === "voice"
+      ? "Connected — click mic to speak"
+      : "Connected — type your command";
+    micBtn.disabled = mode !== "voice";
     muteBtn.disabled = false;
     log("WebSocket connected");
   };
@@ -28,6 +36,12 @@ function connect() {
       await playAudio(msg.data);
     } else if (msg.type === "transcript") {
       transcriptDisplay.textContent = msg.text;
+    } else if (msg.type === "processing") {
+      status.textContent = "Processing...";
+    } else if (msg.type === "status") {
+      status.textContent = msg.text;
+    } else if (msg.type === "error") {
+      status.textContent = "Error: " + msg.message;
     }
   };
 
@@ -45,11 +59,66 @@ function log(msg) {
   status.textContent = msg;
 }
 
+/* Mode switching */
+function setMode(newMode) {
+  mode = newMode;
+  if (newMode === "voice") {
+    modeBtn.classList.add("active");
+    modeBtnText.classList.remove("active");
+    textPanel.classList.add("hidden");
+    micBtn.style.display = "";
+    transcriptDisplay.textContent = "";
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      status.textContent = "Click mic to speak";
+    }
+  } else {
+    modeBtn.classList.remove("active");
+    modeBtnText.classList.add("active");
+    textPanel.classList.remove("hidden");
+    textInput.focus();
+    if (recognition) recognition.abort();
+    micBtn.style.display = "none";
+    transcriptDisplay.textContent = "";
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      status.textContent = "Type your command and press Enter";
+    }
+  }
+}
+
+modeBtn.addEventListener("click", () => setMode("voice"));
+modeBtnText.addEventListener("click", () => setMode("text"));
+
+/* Text input sending */
+function sendText(text) {
+  if (!text.trim()) return;
+  log("Text input: " + text);
+  transcriptDisplay.textContent = text;
+  sendPayload({ type: "transcript", text });
+}
+
+function sendPayload(payload) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(payload));
+  }
+}
+
+textSendBtn.addEventListener("click", () => {
+  sendText(textInput.value);
+  textInput.value = "";
+});
+
+textInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    sendText(textInput.value);
+    textInput.value = "";
+  }
+});
+
 /* Web Speech API — mic to text */
 function initSpeechRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    status.textContent = "Speech recognition not supported in this browser";
+    status.textContent = "Speech recognition not supported — use text mode";
     return;
   }
 
@@ -62,17 +131,17 @@ function initSpeechRecognition() {
     const text = event.results[0][0].transcript;
     log("Heard: " + text);
     transcriptDisplay.textContent = text;
-    sendTranscript(text);
+    sendPayload({ type: "transcript", text });
   };
 
   recognition.onerror = (e) => log("Speech error: " + e.error);
   recognition.onend = () => {
-    if (!muted) micBtn.classList.remove("active");
+    if (!muted && mode === "voice") micBtn.classList.remove("active");
   };
 }
 
 function startListening() {
-  if (!recognition) return;
+  if (!recognition || mode !== "voice") return;
   muted = false;
   recognition.start();
   micBtn.classList.add("active");
@@ -80,9 +149,7 @@ function startListening() {
 }
 
 function sendTranscript(text) {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: "transcript", text }));
-  }
+  sendPayload({ type: "transcript", text });
 }
 
 /* Audio playback from base64 */
@@ -113,8 +180,9 @@ muteBtn.addEventListener("click", () => {
 /* Mic button — push to talk */
 micBtn.addEventListener("click", () => {
   if (!recognition) return;
-  if (recognition.recording) {
+  if (recognition.recording || micBtn.classList.contains("active")) {
     recognition.abort();
+    micBtn.classList.remove("active");
   } else {
     startListening();
   }
@@ -123,3 +191,4 @@ micBtn.addEventListener("click", () => {
 /* Init */
 initSpeechRecognition();
 connect();
+setMode("voice");

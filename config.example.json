@@ -13,5 +13,9 @@
     "C:\\Path\\To\\App2.exe"
   ],
   "clap_threshold": 0.15,
-  "clap_max_gap": 1.2
+  "clap_max_gap": 1.2,
+  "keyword_phrase": "hey assistant",
+  "keyword_enabled": false,
+  "ollama_base_url": "http://localhost:11434",
+  "ollama_model": "llama3.2"
 }

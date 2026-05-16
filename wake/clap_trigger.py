@@ -1,6 +1,17 @@
-"""Double-clap wake trigger — sounddevice + numpy."""
-import numpy as np
-import sounddevice as sd
+"""Double-clap wake trigger — sounddevice + numpy.
+
+Gracefully skips if sounddevice not available (Windows wheels sometimes unavailable).
+Mic button or keyword wake can be used as primary trigger.
+"""
+try:
+    import numpy as np
+    import sounddevice as sd
+    _HAS_SOUNDDEVICE = True
+except ImportError:
+    _HAS_SOUNDDEVICE = False
+    np = None
+    sd = None
+
 import threading
 import logging
 import time
@@ -8,6 +19,7 @@ import time
 from config import config
 
 log = logging.getLogger("clap")
+
 
 class ClapTrigger:
     def __init__(
@@ -17,6 +29,8 @@ class ClapTrigger:
         sample_rate: int = 44100,
         chunk_size: int = 1024,
     ):
+        if not _HAS_SOUNDDEVICE:
+            raise ImportError("sounddevice not available — install from https://github.com/spatialaudio/python-sounddevice/releases")
         self.threshold = threshold
         self.max_gap = max_gap
         self.sample_rate = sample_rate
@@ -71,7 +85,6 @@ class ClapTrigger:
                     if silence_start is None:
                         silence_start = time.time()
                     elif time.time() - silence_start > 0.3:
-                        # End of potential clap sequence
                         if len(clap_times) >= 2:
                             gaps = [clap_times[i+1] - clap_times[i] for i in range(len(clap_times)-1)]
                             avg_gap = sum(gaps) / len(gaps)

@@ -19,6 +19,7 @@ from context import ConversationContext
 from memory import add_turn
 from browser_tools import BrowserTools, get_browser
 from screenshot_cache import storeScreenshot
+from wake.trigger_server import start_trigger_server
 
 log = setup_logger("server")
 

@@ -116,10 +116,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve frontend static files
+# Serve frontend static files at /static (mount at /static, NOT /, to avoid shadowing API routes)
 frontend_dir = Path(__file__).parent / "frontend"
 if frontend_dir.exists():
-    app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="static")
+    app.mount("/static", StaticFiles(directory=str(frontend_dir), html=True), name="static")
+
+
+@app.get("/")
+async def serve_index():
+    """Serve the main UI page."""
+    from fastapi.responses import FileResponse
+    index_path = frontend_dir / "index.html"
+    return FileResponse(str(index_path))
 
 
 # --- WebSocket ---

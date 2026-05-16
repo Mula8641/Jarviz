@@ -3,40 +3,184 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voice Assistant</title>
+  <title>Jarviz Voice Assistant</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
-    <div class="orb-container">
-      <div class="orb"></div>
-      <div class="orb-ring"></div>
-    </div>
-    <h1>Voice Assistant</h1>
-    <p id="status">Initializing...</p>
+  <div class="app">
 
-    <!-- Mode toggle -->
-    <div class="mode-toggle">
-      <button id="mode-btn" class="mode-voice active" title="Voice mode">
-        🎤 Voice
-      </button>
-      <button id="mode-btn-text" class="mode-text" title="Text mode">
-        ⌨️ Text
-      </button>
-    </div>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="orb-mini"></div>
+        <span>Jarviz</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-panel="voice">
+          <span class="icon">🎙️</span> Voice
+        </button>
+        <button class="nav-item" data-panel="browser">
+          <span class="icon">🌐</span> Browser
+        </button>
+        <button class="nav-item" data-panel="launch">
+          <span class="icon">🚀</span> Launch
+        </button>
+        <button class="nav-item" data-panel="memory">
+          <span class="icon">🧠</span> Memory
+        </button>
+        <button class="nav-item" data-panel="settings">
+          <span class="icon">⚙️</span> Settings
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="status-badge">
+          <div class="status-dot" id="ws-dot"></div>
+          <span id="ws-status">Connecting...</span>
+        </div>
+      </div>
+    </aside>
 
-    <!-- Text input (hidden by default) -->
-    <div id="text-panel" class="hidden">
-      <input type="text" id="text-input" placeholder="Type your command here..." autocomplete="off" />
-      <button id="text-send-btn">Send</button>
-    </div>
+    <!-- Main Panel -->
+    <main class="main-panel">
+      <div class="topbar">
+        <span class="topbar-title">Voice Assistant</span>
+        <div class="topbar-actions">
+          <div class="live-badge" id="live-badge">
+            <span class="dot"></span>LIVE
+          </div>
+          <button class="icon-btn" id="clap-toggle" title="Toggle clap trigger">👏</button>
+        </div>
+      </div>
 
-    <div class="controls">
-      <button id="mic-btn" disabled>🎤 Speak</button>
-      <button id="mute-btn" class="mute-off" disabled>Mute 🔇</button>
-    </div>
-    <div id="transcript-display"></div>
+      <!-- Voice Panel -->
+      <div class="panel-content active" id="panel-voice">
+        <div class="voice-section">
+          <div class="orb-wrapper">
+            <div class="orb-ring"></div>
+            <div class="orb" id="orb"></div>
+          </div>
+
+          <button class="mic-btn" id="mic-btn" title="Hold to speak">🎤</button>
+
+          <div class="mode-toggle">
+            <button class="mode-btn active" id="mode-voice-btn">
+              <span>🎤</span> Voice
+            </button>
+            <button class="mode-btn" id="mode-text-btn">
+              <span>⌨️</span> Text
+            </button>
+          </div>
+
+          <div class="text-panel" id="text-panel-main">
+            <input type="text" id="text-input-main" placeholder="Type your command..." autocomplete="off" />
+            <button class="send-btn" id="send-btn">Send</button>
+          </div>
+
+          <div class="status-text" id="status-text">Click mic or type to start</div>
+
+          <div class="quick-cmds" id="quick-cmds">
+            <button class="cmd-chip" data-cmd="What's on my screen?">👀 What's on my screen?</button>
+            <button class="cmd-chip" data-cmd="Search for latest AI news">🔍 AI news</button>
+            <button class="cmd-chip" data-cmd="Open google.com">🌐 Open google.com</button>
+            <button class="cmd-chip" data-cmd="Good morning">☀️ Good morning</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Browser Panel -->
+      <div class="panel-content" id="panel-browser">
+        <div class="voice-section">
+          <div class="text-panel" style="max-width: 600px;">
+            <input type="text" id="browser-url-input" placeholder="Enter URL or search query..." autocomplete="off" />
+            <button class="send-btn" id="browser-go-btn">Go</button>
+          </div>
+          <div class="status-text" id="browser-status">Enter a URL or search query</div>
+          <div id="browser-result" class="msg assistant" style="max-width: 600px; text-align: left; display: none;"></div>
+        </div>
+      </div>
+
+      <!-- Launch Panel -->
+      <div class="panel-content" id="panel-launch">
+        <div class="voice-section">
+          <p class="status-text">Launch your workspace with one click</p>
+          <div class="launch-grid">
+            <div class="launch-item pending" id="app-1">
+              <span class="check">○</span> VS Code
+            </div>
+            <div class="launch-item pending" id="app-2">
+              <span class="check">○</span> Chrome
+            </div>
+            <div class="launch-item pending" id="app-3">
+              <span class="check">○</span> Spotify
+            </div>
+            <div class="launch-item pending" id="app-4">
+              <span class="check">○</span> Terminal
+            </div>
+          </div>
+          <button class="send-btn" id="launch-all-btn" style="margin-top: 1.5rem;">🚀 Launch Everything</button>
+          <button class="send-btn" id="snap-btn" style="margin-top: 0.5rem; background: var(--bg-tertiary);">⬡ Snap Windows</button>
+        </div>
+      </div>
+
+      <!-- Memory Panel -->
+      <div class="panel-content" id="panel-memory">
+        <div class="conversation" id="memory-list">
+          <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+            Cross-session facts will appear here as they're learned.
+          </div>
+        </div>
+        <div style="padding: 1rem; border-top: 1px solid var(--border-subtle);">
+          <button class="send-btn" id="clear-memory-btn" style="background: var(--error);">Clear Memory</button>
+        </div>
+      </div>
+
+      <!-- Settings Panel -->
+      <div class="panel-content" id="panel-settings">
+        <div class="settings-panel">
+          <div class="setting-group">
+            <div class="setting-label">Wake Triggers</div>
+            <div class="setting-item">
+              <span class="setting-name">🎤 Mic Button</span>
+              <button class="toggle active" id="toggle-mic"></button>
+            </div>
+            <div class="setting-item">
+              <span class="setting-name">👏 Clap Detection</span>
+              <button class="toggle active" id="toggle-clap"></button>
+            </div>
+            <div class="setting-item">
+              <span class="setting-name">🎵 Keyword Wake ("Hey Assistant")</span>
+              <button class="toggle" id="toggle-keyword"></button>
+            </div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Audio</div>
+            <div class="setting-item">
+              <span class="setting-name">🔇 Mute All Audio</span>
+              <button class="toggle" id="toggle-mute"></button>
+            </div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">LLM Backend</div>
+            <div class="setting-item">
+              <span class="setting-name">🤖 Use Ollama (offline fallback)</span>
+              <button class="toggle" id="toggle-ollama"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right Panel — Conversation -->
+    <aside class="right-panel">
+      <div class="panel-header">Conversation</div>
+      <div class="conversation" id="conversation"></div>
+      <div style="padding: 0.75rem; border-top: 1px solid var(--border-subtle);">
+        <div id="transcript-preview" style="font-size: 0.75rem; color: var(--text-muted); min-height: 1rem;"></div>
+      </div>
+    </aside>
+
   </div>
+
   <script src="main.js"></script>
 </body>
 </html>

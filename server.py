@@ -187,6 +187,10 @@ async def ws_endpoint(ws: WebSocket):
                         "type": "audio",
                         "data": base64.b64encode(audio).decode(),
                     })
+                    await ws.send_json({
+                        "type": "assistant_message",
+                        "text": response,
+                    })
                 else:
                     await ws.send_json({"type": "error", "message": "TTS failed"})
 

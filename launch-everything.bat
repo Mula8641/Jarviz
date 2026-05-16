@@ -50,13 +50,13 @@ echo  [OK] Virtual environment active
 REM ── Step 4: Upgrade pip ────────────────────────────────────────────────────
 echo.
 echo  [INSTALL] Upgrading pip...
-%VENV_PYTHON% -m pip install --upgrade pip -q
+%VENV_PYTHON% -m pip install --upgrade pip --no-cache-dir -q
 echo  [OK] Pip upgraded
 
 REM ── Step 5: Install dependencies ─────────────────────────────────────────
 echo.
 echo  [INSTALL] Installing Python packages (this may take a minute)...
-%VENV_PYTHON% -m pip install -r requirements.txt -q
+%VENV_PYTHON% -m pip install -r requirements.txt --no-cache-dir -q
 if errorlevel 1 (
     echo  [ERROR] Failed to install dependencies.
     echo  Try running as Administrator or check your internet connection.

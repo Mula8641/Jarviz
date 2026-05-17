@@ -16,14 +16,27 @@ def text_to_speech(text: str) -> bytes:
         from elevenlabs import ElevenLabs
         client = ElevenLabs(api_key=api_key)
 
+        stability = float(config.get("elevenlabs_stability", 0.5))
+        similarity_boost = float(config.get("elevenlabs_similarity_boost", 0.75))
+
         chunks = []
-        for chunk in client.text_to_speech.stream(
-            voice_id=voice_id,
-            text=text,
-            model_id="eleven_multilingual_v2",
-            output_format="mp3_44100_96",
-        ):
-            chunks.append(chunk)
+        try:
+            for chunk in client.text_to_speech.stream(
+                voice_id=voice_id,
+                text=text,
+                model_id="eleven_multilingual_v2",
+                output_format="mp3_44100_96",
+                voice_settings={"stability": stability, "similarity_boost": similarity_boost},
+            ):
+                chunks.append(chunk)
+        except TypeError:
+            for chunk in client.text_to_speech.stream(
+                voice_id=voice_id,
+                text=text,
+                model_id="eleven_multilingual_v2",
+                output_format="mp3_44100_96",
+            ):
+                chunks.append(chunk)
 
         audio = b"".join(chunks)
         log.info("TTS generated %d bytes", len(audio))

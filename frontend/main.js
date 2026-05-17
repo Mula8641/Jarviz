@@ -495,3 +495,238 @@ document.querySelectorAll(".save-key-btn").forEach(btn => {
     }
   });
 });
+
+// ── Reminders Panel ───────────────────────────────────────────────────────────
+async function loadReminders() {
+  const el = document.getElementById("reminders-list");
+  if (!el) return;
+  el.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-muted);font-size:0.85rem;">Loading...</div>';
+  try {
+    const res = await fetch("/reminders");
+    const data = await res.json();
+    const reminders = data.reminders || [];
+    el.innerHTML = "";
+    if (reminders.length === 0) {
+      el.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-muted);font-size:0.85rem;">No upcoming reminders. Say "remind me in 10 minutes to check the oven."</div>';
+      return;
+    }
+    reminders.forEach(r => {
+      const div = document.createElement("div");
+      div.className = "reminder-item";
+      const dt = r.remind_at.replace("T", " ").slice(0, 16) + " UTC";
+      div.innerHTML = `<span class="reminder-msg">${r.message}</span><span class="reminder-time">${dt}</span><button class="reminder-del" data-id="${r.id}" title="Dismiss">✕</button>`;
+      div.querySelector(".reminder-del").addEventListener("click", async () => {
+        await fetch(`/reminders/${r.id}`, { method: "DELETE" });
+        loadReminders();
+      });
+      el.appendChild(div);
+    });
+  } catch (e) {
+    log("Load reminders failed: " + e.message);
+  }
+}
+
+document.querySelectorAll(".nav-item").forEach(item => {
+  if (item.dataset.panel === "reminders") {
+    item.addEventListener("click", loadReminders);
+  }
+});
+
+// ── Response Style ────────────────────────────────────────────────────────────
+let currentStyle = "normal";
+
+function setResponseStyle(style) {
+  currentStyle = style;
+  document.querySelectorAll(".style-pill").forEach(pill => {
+    pill.classList.toggle("active", pill.dataset.style === style);
+  });
+  fetch("/config/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ response_style: style }),
+  }).catch(e => log("Style save error: " + e.message));
+}
+
+document.querySelectorAll(".style-pill").forEach(pill => {
+  pill.addEventListener("click", () => setResponseStyle(pill.dataset.style));
+});
+
+// ── Voice Tuning Sliders ──────────────────────────────────────────────────────
+const sliderStability  = document.getElementById("slider-stability");
+const sliderSimilarity = document.getElementById("slider-similarity");
+const stabilityVal     = document.getElementById("stability-val");
+const similarityVal    = document.getElementById("similarity-val");
+
+sliderStability?.addEventListener("input", () => {
+  if (stabilityVal) stabilityVal.textContent = parseFloat(sliderStability.value).toFixed(2);
+});
+sliderSimilarity?.addEventListener("input", () => {
+  if (similarityVal) similarityVal.textContent = parseFloat(sliderSimilarity.value).toFixed(2);
+});
+
+document.getElementById("save-voice-tuning")?.addEventListener("click", async () => {
+  const btn = document.getElementById("save-voice-tuning");
+  try {
+    const res = await fetch("/config/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        elevenlabs_stability: parseFloat(sliderStability.value),
+        elevenlabs_similarity_boost: parseFloat(sliderSimilarity.value),
+      }),
+    });
+    const data = await res.json();
+    if (data.status === "ok" && btn) {
+      const orig = btn.textContent;
+      btn.textContent = "Saved!";
+      btn.style.background = "var(--success)";
+      setTimeout(() => { btn.textContent = orig; btn.style.background = ""; }, 2000);
+    }
+  } catch (e) { log("Voice tuning save error: " + e.message); }
+});
+
+// ── System Prompt Editor ──────────────────────────────────────────────────────
+document.getElementById("save-system-prompt")?.addEventListener("click", async () => {
+  const text = document.getElementById("system-prompt-input")?.value || "";
+  const statusEl = document.getElementById("prompt-save-status");
+  try {
+    const res = await fetch("/config/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ system_prompt_override: text || "__clear__" }),
+    });
+    const data = await res.json();
+    if (statusEl) statusEl.textContent = data.status === "ok" ? "Saved!" : "Failed.";
+  } catch (e) { if (statusEl) statusEl.textContent = "Error: " + e.message; }
+  if (statusEl) setTimeout(() => { statusEl.textContent = ""; }, 3000);
+});
+
+document.getElementById("clear-system-prompt")?.addEventListener("click", async () => {
+  const textarea = document.getElementById("system-prompt-input");
+  if (textarea) textarea.value = "";
+  const statusEl = document.getElementById("prompt-save-status");
+  try {
+    const res = await fetch("/config/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ system_prompt_override: "__clear__" }),
+    });
+    const data = await res.json();
+    if (statusEl) statusEl.textContent = data.status === "ok" ? "Cleared — using default prompt." : "Failed.";
+  } catch (e) { if (statusEl) statusEl.textContent = "Error: " + e.message; }
+  if (statusEl) setTimeout(() => { statusEl.textContent = ""; }, 3000);
+});
+
+// ── Tool Toggles ──────────────────────────────────────────────────────────────
+const ALL_TOOLS = [
+  "search_web", "open_url", "describe_screen", "get_memory_facts",
+  "remember_fact", "launch_app", "read_page_content", "get_weather",
+  "remind_me", "list_reminders", "read_clipboard", "write_clipboard",
+];
+let enabledTools = new Set(ALL_TOOLS);
+
+function renderToolGrid(enabled) {
+  const grid = document.getElementById("tool-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  ALL_TOOLS.forEach(name => {
+    const label = name.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    const item  = document.createElement("div");
+    item.className = "tool-toggle-item";
+    const isOn = enabled.has(name);
+    item.innerHTML = `<button class="toggle ${isOn ? "active" : ""}" data-tool="${name}"></button><span>${label}</span>`;
+    item.querySelector(".toggle").addEventListener("click", function() {
+      this.classList.toggle("active");
+      if (this.classList.contains("active")) enabledTools.add(this.dataset.tool);
+      else enabledTools.delete(this.dataset.tool);
+    });
+    grid.appendChild(item);
+  });
+}
+
+document.getElementById("save-tools")?.addEventListener("click", async () => {
+  const payload = enabledTools.size === ALL_TOOLS.length ? [] : [...enabledTools];
+  const statusEl = document.getElementById("tools-save-status");
+  try {
+    const res = await fetch("/config/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled_tools: payload }),
+    });
+    const data = await res.json();
+    if (statusEl) statusEl.textContent = data.status === "ok" ? "Saved!" : "Failed.";
+  } catch (e) { if (statusEl) statusEl.textContent = "Error: " + e.message; }
+  if (statusEl) setTimeout(() => { statusEl.textContent = ""; }, 3000);
+});
+
+// ── Keyboard Shortcuts ────────────────────────────────────────────────────────
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  if (e.code === "Space") {
+    e.preventDefault();
+    if (mode !== "voice" || muted || !recognition) return;
+    if (listening) {
+      recognition.stop();
+    } else {
+      listening = true;
+      micBtn.classList.add("listening");
+      orb.className = "orb listening";
+      statusText.textContent = "Listening...";
+      try { recognition.start(); } catch (_) {}
+    }
+  }
+  if (e.code === "Escape" && listening && recognition) {
+    recognition.abort();
+    listening = false;
+    micBtn.classList.remove("listening");
+    orb.className = "orb";
+    statusText.textContent = "Cancelled";
+  }
+});
+
+// ── Export Conversation ────────────────────────────────────────────────────────
+document.getElementById("export-btn")?.addEventListener("click", () => {
+  if (!conversationHistory.length) return;
+  const lines = conversationHistory.map(m => `[${m.role.toUpperCase()}]\n${m.content}`);
+  const text  = `Jarviz Conversation — ${new Date().toLocaleString()}\n${"─".repeat(40)}\n\n${lines.join("\n\n")}`;
+  const blob  = new Blob([text], { type: "text/plain" });
+  const a     = document.createElement("a");
+  a.href      = URL.createObjectURL(blob);
+  a.download  = `jarviz-${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ── Load extended config (style, sliders, prompt, tools) ─────────────────────
+async function loadConfigExtended() {
+  try {
+    const res = await fetch("/config");
+    const cfg = await res.json();
+
+    if (cfg.response_style && ["brief","normal","detailed"].includes(cfg.response_style)) {
+      setResponseStyle(cfg.response_style);
+    }
+    if (sliderStability && cfg.elevenlabs_stability !== undefined) {
+      sliderStability.value = cfg.elevenlabs_stability;
+      if (stabilityVal) stabilityVal.textContent = parseFloat(cfg.elevenlabs_stability).toFixed(2);
+    }
+    if (sliderSimilarity && cfg.elevenlabs_similarity_boost !== undefined) {
+      sliderSimilarity.value = cfg.elevenlabs_similarity_boost;
+      if (similarityVal) similarityVal.textContent = parseFloat(cfg.elevenlabs_similarity_boost).toFixed(2);
+    }
+    const promptEl = document.getElementById("system-prompt-input");
+    if (promptEl && cfg.system_prompt_override && cfg.system_prompt_override !== "__clear__") {
+      promptEl.value = cfg.system_prompt_override;
+    }
+    const configEnabled = cfg.enabled_tools;
+    enabledTools = Array.isArray(configEnabled) && configEnabled.length > 0
+      ? new Set(configEnabled)
+      : new Set(ALL_TOOLS);
+    renderToolGrid(enabledTools);
+  } catch (e) {
+    log("Extended config load error: " + e.message);
+    renderToolGrid(enabledTools);
+  }
+}
+
+loadConfigExtended();

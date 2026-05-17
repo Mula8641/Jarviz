@@ -14,5 +14,10 @@
   "keyword_phrase": "hey assistant",
   "keyword_enabled": false,
   "ollama_base_url": "http://localhost:11434",
-  "ollama_model": "llama3.2"
+  "ollama_model": "llama3.2",
+  "response_style": "normal",
+  "enabled_tools": [],
+  "system_prompt_override": "",
+  "elevenlabs_stability": 0.5,
+  "elevenlabs_similarity_boost": 0.75
 }

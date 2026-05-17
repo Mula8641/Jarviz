@@ -1,10 +1,11 @@
 """System prompt builder — personality, context injection."""
 from config import config
 
-_USER = config.get("user_name", "User")
-_CITY = config.get("city", "Berlin")
 
 def system_prompt() -> str:
+    _USER = config.get("user_name", "User")
+    _CITY = config.get("city", "Berlin")
+
     user_facts = ""
     try:
         from memory import get_facts_for_prompt
@@ -14,7 +15,11 @@ def system_prompt() -> str:
 
     facts_block = f"\n\nKnown user facts:\n{user_facts}" if user_facts else ""
 
-    return f"""You are a helpful, calm, and concise voice assistant.
+    override = config.get("system_prompt_override", "").strip()
+    if override:
+        base_prompt = override
+    else:
+        base_prompt = f"""You are a helpful, calm, and concise voice assistant.
 
 Your personality:
 - Helpful and friendly, never sarcastic or condescending
@@ -34,8 +39,23 @@ When asked about weather: use the city context above.
 
 If you don't know something, say so honestly — don't make up answers."""
 
+    # Append user facts block to override prompt too
+    if override and facts_block:
+        base_prompt = base_prompt + facts_block
+
+    # Inject response style
+    style = config.get("response_style", "normal").strip().lower()
+    if style == "brief":
+        base_prompt += "\n\nResponse style: BRIEF — keep all responses to 1-2 sentences maximum."
+    elif style == "detailed":
+        base_prompt += "\n\nResponse style: DETAILED — give thorough, step-by-step explanations."
+
+    return base_prompt
+
+
 def greeting_prompt() -> str:
     """Morning greeting with weather + date."""
+    _USER = config.get("user_name", "User")
     from datetime import datetime
     now = datetime.now()
     hour = now.hour

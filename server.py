@@ -10,6 +10,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 import uvicorn
 from pathlib import Path
 import threading
@@ -323,13 +324,20 @@ class ConfigSaveRequest(BaseModel):
     elevenlabs_voice_id: str = ""
     user_name: str = ""
     city: str = ""
-    clap_threshold: float = 0.15
-    clap_max_gap: float = 0.0
+    clap_threshold: Optional[float] = None
+    clap_max_gap: Optional[float] = None
     keyword_phrase: str = ""
-    keyword_enabled: bool = False
+    keyword_enabled: Optional[bool] = None
     ollama_base_url: str = ""
     ollama_model: str = ""
-    apps: list[str] = []
+    apps: Optional[list[str]] = None
+    response_style: str = ""
+    enabled_tools: Optional[list[str]] = None
+    system_prompt_override: Optional[str] = None
+    elevenlabs_stability: Optional[float] = None
+    elevenlabs_similarity_boost: Optional[float] = None
+
+_ALLOW_EMPTY = {"system_prompt_override"}
 
 @app.post("/config/save")
 async def save_config(body: ConfigSaveRequest):
@@ -345,9 +353,16 @@ async def save_config(body: ConfigSaveRequest):
         data = json.load(f)
 
     update_fields = body.model_dump()
+
+    # Handle __clear__ for system_prompt_override before the main loop
+    if update_fields.get("system_prompt_override") == "__clear__":
+        data["system_prompt_override"] = ""
+        del update_fields["system_prompt_override"]
+
     for key, value in update_fields.items():
-        # Skip empty strings (unset text fields) but keep 0.0 floats, False bools, non-empty lists
-        if value == "" or value is None:
+        if value is None:
+            continue
+        if isinstance(value, str) and value == "" and key not in _ALLOW_EMPTY:
             continue
         data[key] = value
 
@@ -396,6 +411,18 @@ async def memory_facts():
 async def memory_clear():
     """Delete all stored user facts."""
     clear_facts()
+    return {"status": "ok"}
+
+@app.get("/reminders")
+async def list_reminders_endpoint():
+    from memory import get_upcoming_reminders
+    reminders = get_upcoming_reminders()
+    return {"status": "ok", "reminders": reminders}
+
+@app.delete("/reminders/{rid}")
+async def delete_reminder_endpoint(rid: int):
+    from memory import mark_reminder_done
+    mark_reminder_done(rid)
     return {"status": "ok"}
 
 class TriggerToggleRequest(BaseModel):

@@ -11,6 +11,17 @@ log = logging.getLogger("agent")
 MAX_ITERATIONS = 6
 
 
+def _active_tools() -> list:
+    """Return tool definitions filtered by enabled_tools config.
+    If enabled_tools is empty (or unset), return all TOOL_DEFINITIONS."""
+    from config import config as _cfg
+    enabled = _cfg.get("enabled_tools", [])
+    if not enabled:
+        return TOOL_DEFINITIONS
+    enabled_set = set(enabled)
+    return [t for t in TOOL_DEFINITIONS if t.get("function", {}).get("name") in enabled_set]
+
+
 def run(
     messages: list[dict],
     status_callback: Optional[Callable[[str], None]] = None,
@@ -27,7 +38,7 @@ def run(
 
     for iteration in range(MAX_ITERATIONS):
         log.info("Agent iteration %d/%d", iteration + 1, MAX_ITERATIONS)
-        result = chat_with_tools(working, TOOL_DEFINITIONS)
+        result = chat_with_tools(working, _active_tools())
 
         tool_calls = result.get("tool_calls")
 

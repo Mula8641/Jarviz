@@ -265,10 +265,34 @@ document.getElementById("toggle-mute").addEventListener("click", function() {
   statusText.textContent = muted ? "Muted" : "Ready";
 });
 
-document.getElementById("mute-btn-sidebar")?.addEventListener("click", () => {
-  muted = !muted;
-  const btn = document.getElementById("mute-btn-sidebar");
-  if (btn) btn.classList.toggle("active", muted);
+// ── Mic toggle (Settings panel) ───────────────────────────────────────────────
+document.getElementById("toggle-mic").addEventListener("click", function() {
+  const enabled = !this.classList.contains("active");
+  this.classList.toggle("active", enabled);
+  if (!enabled && recognition) recognition.abort();
+  micBtn.disabled = !enabled;
+  statusText.textContent = enabled ? "Mic enabled" : "Mic disabled";
+});
+
+// ── Ollama toggle (Settings panel) ────────────────────────────────────────────
+document.getElementById("toggle-ollama").addEventListener("click", function() {
+  const enabled = !this.classList.contains("active");
+  this.classList.toggle("active", enabled);
+  fetch("/config/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ollama_base_url: enabled ? "http://localhost:11434" : "" }),
+  }).catch(e => log("Ollama toggle error: " + e.message));
+});
+
+// ── Topbar clap toggle ────────────────────────────────────────────────────────
+document.getElementById("clap-toggle")?.addEventListener("click", function() {
+  const enabled = !this.classList.contains("active");
+  this.classList.toggle("active", enabled);
+  // Sync with Settings clap toggle
+  const settingsToggle = document.getElementById("toggle-clap");
+  if (settingsToggle) settingsToggle.classList.toggle("active", enabled);
+  setTrigger("clap", enabled);
 });
 
 // ── Wake Trigger Toggles ───────────────────────────────────────────────────────

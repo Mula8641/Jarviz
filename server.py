@@ -94,8 +94,8 @@ async def _send_greeting(ws: WebSocket):
                 "data": base64.b64encode(greet_audio).decode(),
             })
         await ws.send_json({"type": "status", "text": "Wake triggered — listening"})
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("Greeting send failed: %s", e)
 
 def _save_session_facts():
     """On shutdown: extract notable facts from recent conversation."""
@@ -209,6 +209,7 @@ async def ws_endpoint(ws: WebSocket):
         active_ws = None
     except Exception as e:
         log.error("WS error: %s", e)
+        active_ws = None
 
 # --- REST ---
 class BrowseOpenRequest(BaseModel):
@@ -289,8 +290,12 @@ class ConfigSaveRequest(BaseModel):
     user_name: str = ""
     city: str = ""
     clap_threshold: float = 0.15
+    clap_max_gap: float = 0.0
     keyword_phrase: str = ""
     keyword_enabled: bool = False
+    ollama_base_url: str = ""
+    ollama_model: str = ""
+    apps: list[str] = []
 
 @app.post("/config/save")
 async def save_config(body: ConfigSaveRequest):
@@ -307,8 +312,10 @@ async def save_config(body: ConfigSaveRequest):
 
     update_fields = body.model_dump()
     for key, value in update_fields.items():
-        if value != "" and value is not None:
-            data[key] = value
+        # Skip empty strings (unset text fields) but keep 0.0 floats, False bools, non-empty lists
+        if value == "" or value is None:
+            continue
+        data[key] = value
 
     with open(config_path, "w") as f:
         json.dump(data, f, indent=2)

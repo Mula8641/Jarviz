@@ -457,13 +457,18 @@ log("UI initialized");
 document.querySelectorAll(".save-key-btn").forEach(btn => {
   btn.addEventListener("click", async () => {
     const keyField = btn.dataset.key;
-    const input = document.getElementById("key-" + (
-      keyField === "minimax_api_key" ? "minimax" :
-      keyField === "elevenlabs_api_key" ? "elevenlabs" :
-      keyField === "elevenlabs_voice_id" ? "voice" :
-      keyField === "user_name" ? "cfg-username" :
-      keyField === "city" ? "cfg-city" : ""
-    ));
+    const keyToId = {
+      minimax_api_key:    "key-minimax",
+      openai_api_key:     "key-openai",
+      openai_model:       "key-openai-model",
+      anthropic_api_key:  "key-anthropic",
+      anthropic_model:    "key-anthropic-model",
+      elevenlabs_api_key: "key-elevenlabs",
+      elevenlabs_voice_id:"key-voice",
+      user_name:          "cfg-username",
+      city:               "cfg-city",
+    };
+    const input = document.getElementById(keyToId[keyField] || "");
 
     if (!input) return;
     const value = input.value.trim();
@@ -535,11 +540,15 @@ document.querySelectorAll(".nav-item").forEach(item => {
 // ── Response Style ────────────────────────────────────────────────────────────
 let currentStyle = "normal";
 
-function setResponseStyle(style) {
+function applyResponseStyleUI(style) {
   currentStyle = style;
   document.querySelectorAll(".style-pill").forEach(pill => {
     pill.classList.toggle("active", pill.dataset.style === style);
   });
+}
+
+function setResponseStyle(style) {
+  applyResponseStyleUI(style);
   fetch("/config/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -704,7 +713,7 @@ async function loadConfigExtended() {
     const cfg = await res.json();
 
     if (cfg.response_style && ["brief","normal","detailed"].includes(cfg.response_style)) {
-      setResponseStyle(cfg.response_style);
+      applyResponseStyleUI(cfg.response_style);
     }
     if (sliderStability && cfg.elevenlabs_stability !== undefined) {
       sliderStability.value = cfg.elevenlabs_stability;

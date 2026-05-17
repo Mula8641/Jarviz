@@ -17,3 +17,9 @@ memory.db
 
 # Playwright / browser data
 .playwright/
+
+# Nested duplicate folders (created by directory migration)
+Jarviz/
+
+# Claude Code local settings
+.claude/

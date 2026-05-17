@@ -334,8 +334,8 @@ document.querySelectorAll(".save-key-btn").forEach(btn => {
       keyField === "minimax_api_key" ? "minimax" :
       keyField === "elevenlabs_api_key" ? "elevenlabs" :
       keyField === "elevenlabs_voice_id" ? "voice" :
-      keyField === "user_name" ? "username" :
-      keyField === "city" ? "city" : ""
+      keyField === "user_name" ? "cfg-username" :
+      keyField === "city" ? "cfg-city" : ""
     ));
 
     if (!input) return;

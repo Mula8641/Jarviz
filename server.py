@@ -78,7 +78,8 @@ def _trigger_wake():
     global active_ws
     import asyncio
     if active_ws:
-        asyncio.create_task(_send_greeting(active_ws))
+        loop = asyncio.get_event_loop()
+        asyncio.run_coroutine_threadsafe(_send_greeting(active_ws), loop)
 
 async def _send_greeting(ws: WebSocket):
     try:
@@ -236,10 +237,6 @@ class VisionRequest(BaseModel):
 class WorkspaceLaunchRequest(BaseModel):
     apps: list[str] = []
 
-@app.get("/")
-async def root():
-    return {"status": "ok", "service": "voice-assistant"}
-
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
@@ -312,9 +309,10 @@ async def save_config(body: ConfigSaveRequest):
     from pathlib import Path
     config_path = Path(__file__).parent / "config.json"
 
-    # Load existing or example
+    # Load current config, fall back to example if config.json doesn't exist yet
     example_path = Path(__file__).parent / "config.example.json"
-    with open(example_path) as f:
+    source_path = config_path if config_path.exists() else example_path
+    with open(source_path) as f:
         data = json.load(f)
 
     # Update with new values

@@ -75,6 +75,66 @@ def chat(messages: list[dict], model: str = "MiniMax-M2.7") -> str:
         return f"Error: all LLM backends failed. Last error: {e}"
 
 
+def chat_with_tools(messages: list[dict], tools: list[dict], model: str = "MiniMax-M2.7") -> dict:
+    """Chat with tool definitions. Returns {"content": str} or {"tool_calls": [...], "content": str}."""
+    api_key = config.get("minimax_api_key", "")
+
+    if api_key:
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": model,
+            "messages": messages,
+            "tools": tools,
+            "tool_choice": "auto",
+            "temperature": 0.7,
+        }
+        try:
+            with httpx.Client(timeout=60.0) as client:
+                response = client.post(
+                    f"{BASE_URL}/chat/completions",
+                    json=payload,
+                    headers=headers,
+                )
+                response.raise_for_status()
+                data = response.json()
+                msg = data["choices"][0]["message"]
+                tool_calls = msg.get("tool_calls") or []
+                if tool_calls:
+                    return {"tool_calls": tool_calls, "content": msg.get("content") or ""}
+                return {"content": msg.get("content", "")}
+        except Exception as e:
+            log.warning("MiniMax tool call error: %s. Trying fallback.", e)
+
+    # Ollama fallback — newer models (llama3.1+) support tool calling
+    ollama_url = config.get("ollama_base_url", "")
+    ollama_model = config.get("ollama_model", "llama3.2")
+    if ollama_url:
+        try:
+            payload = {
+                "model": ollama_model,
+                "messages": messages,
+                "tools": tools,
+                "stream": False,
+            }
+            with httpx.Client(timeout=90.0) as client:
+                response = client.post(f"{ollama_url}/api/chat", json=payload)
+                response.raise_for_status()
+                data = response.json()
+                msg = data.get("message", {})
+                tool_calls = msg.get("tool_calls") or []
+                if tool_calls:
+                    return {"tool_calls": tool_calls, "content": msg.get("content") or ""}
+                return {"content": msg.get("content", "")}
+        except Exception as e:
+            log.warning("Ollama tool call error: %s. Falling back to plain chat.", e)
+
+    # Final fallback: plain chat (no tools)
+    return {"content": chat(messages)}
+
+
 def describe_image(image_bytes: bytes, prompt: str = "Describe what you see.") -> str:
     """Send screenshot to MiniMax Vision for description."""
     api_key = config.get("minimax_api_key", "")

@@ -17,13 +17,13 @@ import threading
 from config import config
 from logger import setup_logger
 from audio_tools import text_to_speech
-from llm import chat, describe_image
 from prompts import system_prompt, greeting_prompt
 from context import ConversationContext
 from memory import add_turn, get_facts, clear_facts
-from browser_tools import BrowserTools, get_browser
+from browser_tools import get_browser, shutdown_browser
 from screenshot_cache import storeScreenshot
 from wake.trigger_server import start_trigger_server
+import agent
 
 log = setup_logger("server")
 
@@ -75,6 +75,7 @@ async def lifespan(app: FastAPI):
         app.state.keyword_trigger.stop()
     if hasattr(app.state, "stop_trigger"):
         app.state.stop_trigger()
+    shutdown_browser()
 
 def _trigger_wake():
     global active_ws
@@ -161,46 +162,22 @@ async def ws_endpoint(ws: WebSocket):
                 log.info("Transcript: %s", text)
                 await ws.send_json({"type": "processing", "text": text})
 
-                text_lower = text.lower()
                 loop = asyncio.get_event_loop()
-                if any(k in text_lower for k in ["search for", "search "]):
-                    query = text.replace("search for", "").replace("search", "").strip()
-                    await ws.send_json({"type": "status", "text": f"Searching: {query}"})
-                    try:
-                        def _do_search():
-                            bt = get_browser()
-                            try:
-                                return bt.search(query)
-                            finally:
-                                bt.close()
-                        results = await loop.run_in_executor(None, _do_search)
-                        response = chat([
-                            {"role": "system", "content": "Summarize these search results concisely in 2-3 sentences."},
-                            {"role": "user", "content": "\n".join(results)},
-                        ])
-                    except Exception as e:
-                        response = f"Search failed: {e}"
-                elif any(k in text_lower for k in ["open ", "go to ", "navigate to"]):
-                    url = text.split()[-1].strip(".,!?")
-                    if not url.startswith("http"):
-                        url = "https://" + url
-                    await ws.send_json({"type": "status", "text": f"Opening: {url}"})
-                    try:
-                        def _do_open():
-                            bt = get_browser()
-                            try:
-                                bt.open_url(url)
-                                return bt.read_page()[:2000]
-                            finally:
-                                bt.close()
-                        content = await loop.run_in_executor(None, _do_open)
-                        response = f"Opened {url}. Page has {len(content)} chars."
-                    except Exception as e:
-                        response = f"Failed to open {url}: {e}"
-                else:
-                    msgs = conversation.get_messages(system_prompt())
-                    msgs.append({"role": "user", "content": text})
-                    response = chat(msgs)
+                msgs = conversation.get_messages(system_prompt())
+                msgs.append({"role": "user", "content": text})
+
+                def _status(msg: str):
+                    asyncio.run_coroutine_threadsafe(
+                        ws.send_json({"type": "status", "text": msg}), loop
+                    )
+
+                try:
+                    response = await loop.run_in_executor(
+                        None, lambda: agent.run(msgs, status_callback=_status)
+                    )
+                except Exception as e:
+                    log.error("Agent error: %s", e)
+                    response = "Sorry, something went wrong. Please try again."
 
                 conversation.add_user(text)
                 conversation.add_assistant(response)

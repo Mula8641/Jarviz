@@ -76,6 +76,16 @@ function handleMessage(msg) {
       playAudio(msg.data).then(() => {
         orb.className = "orb";
         statusText.textContent = "Ready";
+        // Continuous listening — restart mic after assistant finishes speaking
+        if (mode === "voice" && !muted && recognition && !listening) {
+          setTimeout(() => {
+            listening = true;
+            micBtn.classList.add("listening");
+            orb.className = "orb listening";
+            statusText.textContent = "Listening...";
+            try { recognition.start(); } catch (_) {}
+          }, 400);
+        }
       });
       break;
 
@@ -94,6 +104,7 @@ function handleMessage(msg) {
         addMessage("assistant", msg.text);
         orb.className = "orb";
         statusText.textContent = "Ready";
+        transcriptPreview.textContent = "";
       }
       break;
 
@@ -106,20 +117,24 @@ function handleMessage(msg) {
 }
 
 // ── Audio Playback ────────────────────────────────────────────────────────────
-async function playAudio(b64Data) {
-  try {
-    audioCtx = audioCtx || new AudioContext();
-    const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
-
-    // Detect format — ElevenLabs returns mp3, decode via AudioContext
-    const audioBuffer = await audioCtx.decodeAudioData(raw.buffer);
-    const src = audioCtx.createBufferSource();
-    src.buffer = audioBuffer;
-    src.connect(audioCtx.destination);
-    src.start();
-  } catch (e) {
-    log("Audio play error: " + e.message);
-  }
+function playAudio(b64Data) {
+  return new Promise((resolve) => {
+    (async () => {
+      try {
+        audioCtx = audioCtx || new AudioContext();
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const audioBuffer = await audioCtx.decodeAudioData(raw.buffer);
+        const src = audioCtx.createBufferSource();
+        src.buffer = audioBuffer;
+        src.connect(audioCtx.destination);
+        src.onended = () => resolve();
+        src.start();
+      } catch (e) {
+        log("Audio play error: " + e.message);
+        resolve();
+      }
+    })();
+  });
 }
 
 // ── Speech Recognition ────────────────────────────────────────────────────────

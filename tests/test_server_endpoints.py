@@ -55,6 +55,7 @@ def _stub_imports():
     bt_mod = types.ModuleType("browser_tools")
     bt_mod.BrowserTools = MagicMock()
     bt_mod.get_browser = MagicMock()
+    bt_mod.shutdown_browser = MagicMock()
     sys.modules["browser_tools"] = bt_mod
 
     # Stub screenshot_cache
@@ -68,6 +69,11 @@ def _stub_imports():
     ts_mod = types.ModuleType("wake.trigger_server")
     ts_mod.start_trigger_server = MagicMock(return_value=lambda: None)
     sys.modules["wake.trigger_server"] = ts_mod
+
+    # Stub agent
+    agent_mod = types.ModuleType("agent")
+    agent_mod.run = MagicMock(return_value="agent response")
+    sys.modules["agent"] = agent_mod
 
 
 _stub_imports()

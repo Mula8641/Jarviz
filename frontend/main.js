@@ -405,11 +405,15 @@ async function loadConfig() {
     const res = await fetch("/config");
     const cfg = await res.json();
     const map = {
-      minimax_api_key:      "key-minimax",
-      elevenlabs_api_key:   "key-elevenlabs",
-      elevenlabs_voice_id:  "key-voice",
-      user_name:            "cfg-username",
-      city:                 "cfg-city",
+      minimax_api_key:    "key-minimax",
+      openai_api_key:     "key-openai",
+      openai_model:       "key-openai-model",
+      anthropic_api_key:  "key-anthropic",
+      anthropic_model:    "key-anthropic-model",
+      elevenlabs_api_key: "key-elevenlabs",
+      elevenlabs_voice_id:"key-voice",
+      user_name:          "cfg-username",
+      city:               "cfg-city",
     };
     for (const [key, id] of Object.entries(map)) {
       const el = document.getElementById(id);

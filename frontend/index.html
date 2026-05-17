@@ -138,14 +138,51 @@
       <div class="panel-content" id="panel-settings">
         <div class="settings-panel">
           <div class="setting-group">
-            <div class="setting-label">API Keys</div>
+            <div class="setting-label">LLM — MiniMax</div>
             <div class="api-key-field">
               <label>MiniMax API Key</label>
               <div class="key-input-row">
-                <input type="password" id="key-minimax" placeholder="sk-..." autocomplete="off" />
+                <input type="password" id="key-minimax" placeholder="eyJ..." autocomplete="off" />
                 <button class="save-key-btn" data-key="minimax_api_key">Save</button>
               </div>
             </div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">LLM — OpenAI</div>
+            <div class="api-key-field">
+              <label>OpenAI API Key</label>
+              <div class="key-input-row">
+                <input type="password" id="key-openai" placeholder="sk-..." autocomplete="off" />
+                <button class="save-key-btn" data-key="openai_api_key">Save</button>
+              </div>
+            </div>
+            <div class="api-key-field">
+              <label>OpenAI Model</label>
+              <div class="key-input-row">
+                <input type="text" id="key-openai-model" placeholder="gpt-4o" autocomplete="off" />
+                <button class="save-key-btn" data-key="openai_model">Save</button>
+              </div>
+            </div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">LLM — Anthropic</div>
+            <div class="api-key-field">
+              <label>Anthropic API Key</label>
+              <div class="key-input-row">
+                <input type="password" id="key-anthropic" placeholder="sk-ant-..." autocomplete="off" />
+                <button class="save-key-btn" data-key="anthropic_api_key">Save</button>
+              </div>
+            </div>
+            <div class="api-key-field">
+              <label>Anthropic Model</label>
+              <div class="key-input-row">
+                <input type="text" id="key-anthropic-model" placeholder="claude-sonnet-4-6" autocomplete="off" />
+                <button class="save-key-btn" data-key="anthropic_model">Save</button>
+              </div>
+            </div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Voice — ElevenLabs</div>
             <div class="api-key-field">
               <label>ElevenLabs API Key</label>
               <div class="key-input-row">

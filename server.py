@@ -280,6 +280,10 @@ async def vision_describe(body: VisionRequest):
 
 class ConfigSaveRequest(BaseModel):
     minimax_api_key: str = ""
+    openai_api_key: str = ""
+    openai_model: str = ""
+    anthropic_api_key: str = ""
+    anthropic_model: str = ""
     elevenlabs_api_key: str = ""
     elevenlabs_voice_id: str = ""
     user_name: str = ""
@@ -312,8 +316,12 @@ async def save_config(body: ConfigSaveRequest):
     # Hot-reload config in memory — no restart needed
     config_module.reload()
 
+    _SECRET_KEYS = [
+        "minimax_api_key", "openai_api_key", "anthropic_api_key",
+        "elevenlabs_api_key", "elevenlabs_voice_id",
+    ]
     safe_data = dict(data)
-    for secret_key in ["minimax_api_key", "elevenlabs_api_key", "elevenlabs_voice_id"]:
+    for secret_key in _SECRET_KEYS:
         if safe_data.get(secret_key):
             safe_data[secret_key] = safe_data[secret_key][:8] + "***"
 
@@ -321,13 +329,17 @@ async def save_config(body: ConfigSaveRequest):
     return {"status": "ok", "config": safe_data}
 
 
+_SECRET_KEYS = [
+    "minimax_api_key", "openai_api_key", "anthropic_api_key",
+    "elevenlabs_api_key", "elevenlabs_voice_id",
+]
+
 @app.get("/config")
 async def get_config():
     """Return current config (secrets masked)."""
     from config import config as cfg
-    import copy
     safe = dict(cfg)
-    for key in ["minimax_api_key", "elevenlabs_api_key", "elevenlabs_voice_id"]:
+    for key in _SECRET_KEYS:
         if safe.get(key):
             safe[key] = safe[key][:8] + "***"
     return safe

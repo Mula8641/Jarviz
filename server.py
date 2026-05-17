@@ -1,4 +1,6 @@
 """Voice Assistant server — FastAPI + WebSocket hub."""
+import truststore
+truststore.inject_into_ssl()
 import asyncio
 import atexit
 import base64
@@ -160,34 +162,41 @@ async def ws_endpoint(ws: WebSocket):
                 await ws.send_json({"type": "processing", "text": text})
 
                 text_lower = text.lower()
+                loop = asyncio.get_event_loop()
                 if any(k in text_lower for k in ["search for", "search "]):
                     query = text.replace("search for", "").replace("search", "").strip()
                     await ws.send_json({"type": "status", "text": f"Searching: {query}"})
-                    bt = get_browser()
                     try:
-                        results = bt.search(query)
-                        bt.close()
+                        def _do_search():
+                            bt = get_browser()
+                            try:
+                                return bt.search(query)
+                            finally:
+                                bt.close()
+                        results = await loop.run_in_executor(None, _do_search)
                         response = chat([
                             {"role": "system", "content": "Summarize these search results concisely in 2-3 sentences."},
                             {"role": "user", "content": "\n".join(results)},
                         ])
                     except Exception as e:
                         response = f"Search failed: {e}"
-                        bt.close()
                 elif any(k in text_lower for k in ["open ", "go to ", "navigate to"]):
                     url = text.split()[-1].strip(".,!?")
                     if not url.startswith("http"):
                         url = "https://" + url
                     await ws.send_json({"type": "status", "text": f"Opening: {url}"})
-                    bt = get_browser()
                     try:
-                        bt.open_url(url)
-                        content = bt.read_page()[:2000]
-                        bt.close()
+                        def _do_open():
+                            bt = get_browser()
+                            try:
+                                bt.open_url(url)
+                                return bt.read_page()[:2000]
+                            finally:
+                                bt.close()
+                        content = await loop.run_in_executor(None, _do_open)
                         response = f"Opened {url}. Page has {len(content)} chars."
                     except Exception as e:
                         response = f"Failed to open {url}: {e}"
-                        bt.close()
                 else:
                     msgs = conversation.get_messages(system_prompt())
                     msgs.append({"role": "user", "content": text})

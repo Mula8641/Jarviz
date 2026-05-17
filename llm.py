@@ -5,7 +5,7 @@ from config import config
 
 log = logging.getLogger("llm")
 
-BASE_URL = "https://api.minimax.chat/v1"
+BASE_URL = "https://api.minimax.io/v1"
 
 
 def _make_minimax_payload(messages: list[dict], model: str) -> dict:
@@ -25,7 +25,7 @@ def _make_ollama_payload(messages: list[dict], model: str) -> dict:
     }
 
 
-def chat(messages: list[dict], model: str = "MiniMax-Text-01") -> str:
+def chat(messages: list[dict], model: str = "MiniMax-M2.7") -> str:
     api_key = config.get("minimax_api_key", "")
 
     # Try MiniMax first

@@ -322,9 +322,31 @@ micBtn.addEventListener("mouseleave", () => {
 // ── Utilities ──────────────────────────────────────────────────────────────────
 function log(msg) { console.log("[Jarviz UI] " + msg); }
 
+// ── Load saved config into Settings panel ─────────────────────────────────────
+async function loadConfig() {
+  try {
+    const res = await fetch("/config");
+    const cfg = await res.json();
+    const map = {
+      minimax_api_key:      "key-minimax",
+      elevenlabs_api_key:   "key-elevenlabs",
+      elevenlabs_voice_id:  "key-voice",
+      user_name:            "cfg-username",
+      city:                 "cfg-city",
+    };
+    for (const [key, id] of Object.entries(map)) {
+      const el = document.getElementById(id);
+      if (el && cfg[key]) el.placeholder = cfg[key].includes("***") ? "••••••••" + cfg[key].slice(-3) : cfg[key];
+    }
+  } catch (e) {
+    log("Could not load config: " + e.message);
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 initSpeech();
 connectWS();
+loadConfig();
 log("UI initialized");
 // ── API Key Saving ────────────────────────────────────────────────────────────
 document.querySelectorAll(".save-key-btn").forEach(btn => {

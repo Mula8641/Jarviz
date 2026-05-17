@@ -101,10 +101,15 @@ function handleMessage(msg) {
 
     case "assistant_message":
       if (msg.text) {
-        addMessage("assistant", msg.text);
+        addMessage("assistant", msg.text, msg.model_used);
         orb.className = "orb";
         statusText.textContent = "Ready";
         transcriptPreview.textContent = "";
+        const badge = document.getElementById("model-badge");
+        if (badge && msg.model_used) {
+          badge.textContent = msg.model_used;
+          badge.style.display = "inline-block";
+        }
       }
       break;
 
@@ -392,11 +397,17 @@ document.querySelectorAll(".nav-item").forEach(item => {
 });
 
 // ── Conversation UI ─────────────────────────────────────────────────────────
-function addMessage(role, text) {
+function addMessage(role, text, modelUsed) {
   conversationHistory.push({ role, content: text });
   const div = document.createElement("div");
   div.className = "msg " + role;
   div.textContent = text;
+  if (role === "assistant" && modelUsed) {
+    const badge = document.createElement("span");
+    badge.className = "msg-model-badge";
+    badge.textContent = modelUsed;
+    div.appendChild(badge);
+  }
 
   const time = document.createElement("span");
   time.className = "time";
@@ -693,6 +704,27 @@ document.addEventListener("keydown", e => {
   }
 });
 
+// ── Routing Settings ──────────────────────────────────────────────────────────
+document.getElementById("toggle-routing")?.addEventListener("click", function() {
+  this.classList.toggle("active");
+});
+
+document.getElementById("save-routing")?.addEventListener("click", async () => {
+  const enabled = document.getElementById("toggle-routing")?.classList.contains("active") ?? true;
+  const backend = document.getElementById("escalation-backend")?.value || "anthropic";
+  const statusEl = document.getElementById("routing-save-status");
+  try {
+    const res = await fetch("/config/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ routing_enabled: enabled, escalation_backend: backend }),
+    });
+    const data = await res.json();
+    if (statusEl) statusEl.textContent = data.status === "ok" ? "Saved!" : "Failed.";
+  } catch (e) { if (statusEl) statusEl.textContent = "Error: " + e.message; }
+  if (statusEl) setTimeout(() => { statusEl.textContent = ""; }, 3000);
+});
+
 // ── Export Conversation ────────────────────────────────────────────────────────
 document.getElementById("export-btn")?.addEventListener("click", () => {
   if (!conversationHistory.length) return;
@@ -732,6 +764,15 @@ async function loadConfigExtended() {
       ? new Set(configEnabled)
       : new Set(ALL_TOOLS);
     renderToolGrid(enabledTools);
+
+    const routingToggle = document.getElementById("toggle-routing");
+    if (routingToggle && cfg.routing_enabled !== undefined) {
+      routingToggle.classList.toggle("active", cfg.routing_enabled !== false);
+    }
+    const escalationSelect = document.getElementById("escalation-backend");
+    if (escalationSelect && cfg.escalation_backend) {
+      escalationSelect.value = cfg.escalation_backend;
+    }
   } catch (e) {
     log("Extended config load error: " + e.message);
     renderToolGrid(enabledTools);

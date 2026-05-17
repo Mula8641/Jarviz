@@ -30,6 +30,8 @@ def load():
     data["clap_max_gap"] = float(os.getenv("CLAP_MAX_GAP", data.get("clap_max_gap", 1.2)))
     data["keyword_phrase"] = os.getenv("KEYWORD_PHRASE", data.get("keyword_phrase", "hey assistant"))
     data["keyword_enabled"] = os.getenv("KEYWORD_ENABLED", str(data.get("keyword_enabled", False))).lower() in ("true", "1", "yes")
+    data["routing_enabled"] = os.getenv("ROUTING_ENABLED", str(data.get("routing_enabled", True))).lower() in ("true", "1", "yes")
+    data["escalation_backend"] = os.getenv("ESCALATION_BACKEND", data.get("escalation_backend", "anthropic"))
     return data
 
 config = load()

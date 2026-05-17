@@ -19,5 +19,7 @@
   "enabled_tools": [],
   "system_prompt_override": "",
   "elevenlabs_stability": 0.5,
-  "elevenlabs_similarity_boost": 0.75
+  "elevenlabs_similarity_boost": 0.75,
+  "routing_enabled": true,
+  "escalation_backend": "anthropic"
 }

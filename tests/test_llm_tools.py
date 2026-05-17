@@ -12,6 +12,10 @@ def _stub_deps():
         "minimax_api_key": "test_key",
         "ollama_base_url": "",
         "ollama_model": "llama3.2",
+        "routing_enabled": True,
+        "escalation_backend": "anthropic",
+        "anthropic_api_key": "",
+        "openai_api_key": "",
     }
     sys.modules["config"] = cfg
 
@@ -63,10 +67,10 @@ class TestChatWithToolsTextResponse(unittest.TestCase):
         }
 
     def test_returns_content_when_no_tool_calls(self):
-        mock_client = _mock_http_client(self._api_resp("Hello!"))
+        mock_client = _mock_http_client(self._api_resp("Hello! I'm happy to help you today."))
         with patch.object(llm_mod.httpx, "Client", return_value=mock_client):
             result = llm_mod.chat_with_tools([{"role": "user", "content": "hi"}], DUMMY_TOOLS)
-        self.assertEqual(result["content"], "Hello!")
+        self.assertEqual(result["content"], "Hello! I'm happy to help you today.")
         self.assertFalse(result.get("tool_calls"))
 
     def test_returns_tool_calls_when_present(self):
@@ -146,7 +150,7 @@ class TestChatWithToolsPayloadShape(unittest.TestCase):
             resp = MagicMock()
             resp.raise_for_status.return_value = None
             resp.json.return_value = {
-                "choices": [{"message": {"content": "ok", "tool_calls": None}}]
+                "choices": [{"message": {"content": "The task is complete and ready.", "tool_calls": None}}]
             }
             return resp
 

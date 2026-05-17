@@ -48,6 +48,7 @@
       <div class="topbar">
         <span class="topbar-title">Voice Assistant</span>
         <div class="topbar-actions">
+          <span class="model-badge" id="model-badge" title="Last model used"></span>
           <div class="live-badge" id="live-badge">
             <span class="dot"></span>LIVE
           </div>
@@ -298,6 +299,24 @@
               <button class="save-key-btn" id="clear-system-prompt" style="background:var(--bg-tertiary);color:var(--text-secondary);">Clear (use default)</button>
             </div>
             <div id="prompt-save-status" class="key-status"></div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Smart Routing</div>
+            <div class="setting-item">
+              <span class="setting-name">⚡ Attempt-then-Escalate</span>
+              <button class="toggle active" id="toggle-routing"></button>
+            </div>
+            <div class="api-key-field" style="margin-top:0.5rem;">
+              <label>Escalation Backend</label>
+              <div class="key-input-row">
+                <select id="escalation-backend" style="flex:1;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:6px;padding:0.4rem 0.6rem;font-size:0.875rem;">
+                  <option value="anthropic">Anthropic (Claude)</option>
+                  <option value="openai">OpenAI (GPT)</option>
+                </select>
+                <button class="save-key-btn" id="save-routing">Save</button>
+              </div>
+            </div>
+            <div id="routing-save-status" class="key-status"></div>
           </div>
           <div class="setting-group">
             <div class="setting-label">Active Tools</div>

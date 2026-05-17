@@ -226,9 +226,11 @@ async def ws_endpoint(ws: WebSocket):
                         "type": "audio",
                         "data": base64.b64encode(audio).decode(),
                     })
+                    import llm as _llm
                     await ws.send_json({
                         "type": "assistant_message",
                         "text": response,
+                        "model_used": _llm.last_used,
                     })
                 else:
                     await ws.send_json({"type": "error", "message": "TTS failed"})
@@ -336,6 +338,8 @@ class ConfigSaveRequest(BaseModel):
     system_prompt_override: Optional[str] = None
     elevenlabs_stability: Optional[float] = None
     elevenlabs_similarity_boost: Optional[float] = None
+    routing_enabled: Optional[bool] = None
+    escalation_backend: str = ""
 
 _ALLOW_EMPTY = {"system_prompt_override"}
 

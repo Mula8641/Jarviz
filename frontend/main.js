@@ -256,6 +256,33 @@ document.getElementById("mute-btn-sidebar")?.addEventListener("click", () => {
   if (btn) btn.classList.toggle("active", muted);
 });
 
+// ── Wake Trigger Toggles ───────────────────────────────────────────────────────
+async function setTrigger(type, enabled) {
+  try {
+    const res = await fetch(`/triggers/${type}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    });
+    const data = await res.json();
+    if (data.status !== "ok") log(`Trigger ${type} toggle failed: ${data.message}`);
+  } catch (e) {
+    log(`Trigger ${type} error: ${e.message}`);
+  }
+}
+
+document.getElementById("toggle-clap").addEventListener("click", function() {
+  const enabled = !this.classList.contains("active");
+  this.classList.toggle("active", enabled);
+  setTrigger("clap", enabled);
+});
+
+document.getElementById("toggle-keyword").addEventListener("click", function() {
+  const enabled = !this.classList.contains("active");
+  this.classList.toggle("active", enabled);
+  setTrigger("keyword", enabled);
+});
+
 // ── Browser Panel ──────────────────────────────────────────────────────────────
 document.getElementById("browser-go-btn").addEventListener("click", () => {
   const input = document.getElementById("browser-url-input");
@@ -285,9 +312,44 @@ document.getElementById("snap-btn").addEventListener("click", () => {
 });
 
 // ── Memory Panel ──────────────────────────────────────────────────────────────
-document.getElementById("clear-memory-btn").addEventListener("click", () => {
-  sendPayload({ type: "transcript", text: "clear memory" });
-  statusText.textContent = "Memory cleared";
+async function loadMemoryFacts() {
+  try {
+    const res = await fetch("/memory/facts");
+    const data = await res.json();
+    const facts = data.facts || {};
+    const keys = Object.keys(facts);
+    memoryListEl.innerHTML = "";
+    if (keys.length === 0) {
+      memoryListEl.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-muted);font-size:0.85rem;">No facts stored yet. Have a conversation and they\'ll appear here.</div>';
+      return;
+    }
+    keys.forEach(key => {
+      const div = document.createElement("div");
+      div.className = "msg assistant";
+      div.style.cssText = "display:flex;justify-content:space-between;align-items:center;";
+      div.innerHTML = `<span><strong>${key}:</strong> ${facts[key]}</span>`;
+      memoryListEl.appendChild(div);
+    });
+  } catch (e) {
+    log("Could not load memory facts: " + e.message);
+  }
+}
+
+document.getElementById("clear-memory-btn").addEventListener("click", async () => {
+  try {
+    await fetch("/memory/clear", { method: "POST" });
+    memoryListEl.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-muted);font-size:0.85rem;">Memory cleared.</div>';
+    statusText.textContent = "Memory cleared";
+  } catch (e) {
+    log("Clear memory failed: " + e.message);
+  }
+});
+
+// Load facts when memory nav item is clicked
+document.querySelectorAll(".nav-item").forEach(item => {
+  if (item.dataset.panel === "memory") {
+    item.addEventListener("click", loadMemoryFacts);
+  }
 });
 
 // ── Conversation UI ─────────────────────────────────────────────────────────

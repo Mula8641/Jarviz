@@ -107,8 +107,17 @@ Conversation:
     except Exception as e:
         log.warning("Fact extraction failed: %s", e)
 
+def clear_facts():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("DELETE FROM user_facts")
+    log.info("All user facts cleared")
+
+def delete_fact(key: str):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("DELETE FROM user_facts WHERE key = ?", (key,))
+    log.info("Fact deleted: %s", key)
+
 def get_facts_for_prompt() -> str:
-    """Get facts as a string to inject into system prompt."""
     facts = get_facts()
     if not facts:
         return ""

@@ -29,3 +29,9 @@ def load():
     return data
 
 config = load()
+
+def reload():
+    """Re-read config from disk and update the global dict in place (no restart needed)."""
+    new = load()
+    config.clear()
+    config.update(new)

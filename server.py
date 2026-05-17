@@ -20,7 +20,7 @@ from audio_tools import text_to_speech
 from llm import chat, describe_image
 from prompts import system_prompt, greeting_prompt
 from context import ConversationContext
-from memory import add_turn
+from memory import add_turn, get_facts, clear_facts
 from browser_tools import BrowserTools, get_browser
 from screenshot_cache import storeScreenshot
 from wake.trigger_server import start_trigger_server
@@ -313,33 +313,34 @@ class ConfigSaveRequest(BaseModel):
 
 @app.post("/config/save")
 async def save_config(body: ConfigSaveRequest):
-    """Save API keys and settings from UI — writes to config.json."""
+    """Save API keys and settings from UI — writes to config.json and hot-reloads."""
     import json
+    import config as config_module
     from pathlib import Path
     config_path = Path(__file__).parent / "config.json"
 
-    # Load current config, fall back to example if config.json doesn't exist yet
     example_path = Path(__file__).parent / "config.example.json"
     source_path = config_path if config_path.exists() else example_path
     with open(source_path) as f:
         data = json.load(f)
 
-    # Update with new values
     update_fields = body.model_dump()
     for key, value in update_fields.items():
         if value != "" and value is not None:
             data[key] = value
 
-    # Mask keys in response
+    with open(config_path, "w") as f:
+        json.dump(data, f, indent=2)
+
+    # Hot-reload config in memory — no restart needed
+    config_module.reload()
+
     safe_data = dict(data)
     for secret_key in ["minimax_api_key", "elevenlabs_api_key", "elevenlabs_voice_id"]:
         if safe_data.get(secret_key):
             safe_data[secret_key] = safe_data[secret_key][:8] + "***"
 
-    with open(config_path, "w") as f:
-        json.dump(data, f, indent=2)
-
-    log.info("Config saved from UI")
+    log.info("Config saved and reloaded from UI")
     return {"status": "ok", "config": safe_data}
 
 
@@ -354,6 +355,66 @@ async def get_config():
             safe[key] = safe[key][:8] + "***"
     return safe
 
+
+@app.get("/memory/facts")
+async def memory_facts():
+    """Return all stored user facts for the memory panel."""
+    facts = get_facts()
+    return {"status": "ok", "facts": facts}
+
+@app.post("/memory/clear")
+async def memory_clear():
+    """Delete all stored user facts."""
+    clear_facts()
+    return {"status": "ok"}
+
+class TriggerToggleRequest(BaseModel):
+    enabled: bool
+
+@app.post("/triggers/clap")
+async def toggle_clap(body: TriggerToggleRequest):
+    """Start or stop the clap wake trigger at runtime."""
+    if body.enabled:
+        if not hasattr(app.state, "clap_trigger") or not app.state.clap_trigger._running:
+            try:
+                from wake.clap_trigger import ClapTrigger
+                trigger = ClapTrigger(
+                    threshold=config.get("clap_threshold", 0.15),
+                    max_gap=config.get("clap_max_gap", 1.2),
+                )
+                trigger.set_callback(lambda: _trigger_wake())
+                trigger.start()
+                app.state.clap_trigger = trigger
+                log.info("Clap trigger enabled via API")
+            except Exception as e:
+                return {"status": "error", "message": str(e)}
+    else:
+        if hasattr(app.state, "clap_trigger"):
+            app.state.clap_trigger.stop()
+            del app.state.clap_trigger
+            log.info("Clap trigger disabled via API")
+    return {"status": "ok", "enabled": body.enabled}
+
+@app.post("/triggers/keyword")
+async def toggle_keyword(body: TriggerToggleRequest):
+    """Start or stop the keyword wake trigger at runtime."""
+    if body.enabled:
+        if not hasattr(app.state, "keyword_trigger") or not app.state.keyword_trigger._running:
+            try:
+                from wake.keyword_trigger import KeywordTrigger
+                kw = KeywordTrigger(phrase=config.get("keyword_phrase", "hey assistant"))
+                kw.set_callback(lambda: _trigger_wake())
+                kw.start()
+                app.state.keyword_trigger = kw
+                log.info("Keyword trigger enabled via API")
+            except Exception as e:
+                return {"status": "error", "message": str(e)}
+    else:
+        if hasattr(app.state, "keyword_trigger"):
+            app.state.keyword_trigger.stop()
+            del app.state.keyword_trigger
+            log.info("Keyword trigger disabled via API")
+    return {"status": "ok", "enabled": body.enabled}
 
 @app.post("/workspace/launch")
 async def workspace_launch(body: WorkspaceLaunchRequest):

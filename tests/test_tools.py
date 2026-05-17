@@ -46,8 +46,12 @@ class TestToolDefinitions(unittest.TestCase):
 
     def test_expected_tools_present(self):
         names = {t["function"]["name"] for t in tools_mod.TOOL_DEFINITIONS}
-        for expected in ["search_web", "open_url", "describe_screen",
-                         "get_memory_facts", "remember_fact", "launch_app", "read_page_content"]:
+        for expected in [
+            "search_web", "open_url", "describe_screen",
+            "get_memory_facts", "remember_fact", "launch_app", "read_page_content",
+            "get_weather", "remind_me", "list_reminders",
+            "read_clipboard", "write_clipboard",
+        ]:
             self.assertIn(expected, names)
 
     def test_required_parameters_are_lists(self):

@@ -1,7 +1,10 @@
 """Agent tools — JSON schemas for LLM + executor functions."""
 import json
 import logging
+import re
 import subprocess
+from datetime import datetime, timedelta
+import httpx
 
 log = logging.getLogger("tools")
 
@@ -99,6 +102,71 @@ TOOL_DEFINITIONS = [
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get the current weather for a city. If no city is given, uses the user's configured city.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "city": {"type": "string", "description": "City name (e.g. 'London', 'Berlin')"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remind_me",
+            "description": "Set a reminder that Jarviz will speak aloud at the specified time.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message": {"type": "string", "description": "What to remind the user about"},
+                    "when": {
+                        "type": "string",
+                        "description": (
+                            "When to trigger. Natural language: 'in 10 minutes', 'in 2 hours', "
+                            "'at 3pm', 'at 14:30', 'tomorrow at 9am'"
+                        ),
+                    },
+                },
+                "required": ["message", "when"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_reminders",
+            "description": "List all upcoming (pending) reminders.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_clipboard",
+            "description": "Read the current contents of the system clipboard.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "write_clipboard",
+            "description": "Write text to the system clipboard.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "Text to copy to clipboard"},
+                },
+                "required": ["text"],
+            },
+        },
+    },
 ]
 
 
@@ -122,6 +190,16 @@ def execute_tool(name: str, arguments: dict) -> str:
             return _launch_app(**arguments)
         if name == "read_page_content":
             return _read_page_content()
+        if name == "get_weather":
+            return _get_weather(**arguments)
+        if name == "remind_me":
+            return _remind_me(**arguments)
+        if name == "list_reminders":
+            return _list_reminders()
+        if name == "read_clipboard":
+            return _read_clipboard()
+        if name == "write_clipboard":
+            return _write_clipboard(**arguments)
         return f"Unknown tool: {name}"
     except TypeError as e:
         log.error("Tool %s bad arguments %s: %s", name, arguments, e)
@@ -184,3 +262,121 @@ def _read_page_content() -> str:
     bt = get_browser()
     content = bt.read_page()
     return content[:3000] if content else "No page loaded or page is empty."
+
+
+def _get_weather(city: str = "") -> str:
+    from config import config
+    target = (city or config.get("city", "London")).strip()
+    try:
+        with httpx.Client(timeout=10) as client:
+            resp = client.get(f"https://wttr.in/{target}?format=j1")
+            resp.raise_for_status()
+            data = resp.json()
+        cur = data["current_condition"][0]
+        desc = cur["weatherDesc"][0]["value"]
+        temp_c = cur["temp_C"]
+        temp_f = cur["temp_F"]
+        feels_c = cur["FeelsLikeC"]
+        humidity = cur["humidity"]
+        wind = cur["windspeedKmph"]
+        return (
+            f"Weather in {target}: {desc}, {temp_c}°C ({temp_f}°F). "
+            f"Feels like {feels_c}°C. Humidity {humidity}%, wind {wind} km/h."
+        )
+    except Exception as e:
+        return f"Could not get weather for '{target}': {e}"
+
+
+def _parse_reminder_time(when: str) -> datetime:
+    """Parse natural-language time expressions into a UTC datetime."""
+    s = when.lower().strip()
+    now = datetime.utcnow()
+
+    # "in X seconds" (useful for tests / quick demos)
+    m = re.match(r"in (\d+)\s*seconds?", s)
+    if m:
+        return now + timedelta(seconds=int(m.group(1)))
+
+    # "in X minutes"
+    m = re.match(r"in (\d+)\s*(?:minute|minutes|min|mins?)", s)
+    if m:
+        return now + timedelta(minutes=int(m.group(1)))
+
+    # "in X hours"
+    m = re.match(r"in (\d+)\s*(?:hour|hours|hr|hrs?)", s)
+    if m:
+        return now + timedelta(hours=int(m.group(1)))
+
+    # "tomorrow[ at H[:MM][ am/pm]]"
+    m = re.match(r"tomorrow(?:\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?", s)
+    if m:
+        hour = int(m.group(1)) if m.group(1) else 9
+        minute = int(m.group(2)) if m.group(2) else 0
+        ampm = m.group(3)
+        if ampm == "pm" and hour != 12:
+            hour += 12
+        elif ampm == "am" and hour == 12:
+            hour = 0
+        base = now + timedelta(days=1)
+        return base.replace(hour=min(hour, 23), minute=min(minute, 59), second=0, microsecond=0)
+
+    # "at H[:MM][ am/pm]"
+    m = re.match(r"at (\d{1,2})(?::(\d{2}))?\s*(am|pm)?", s)
+    if m:
+        hour = int(m.group(1))
+        minute = int(m.group(2)) if m.group(2) else 0
+        ampm = m.group(3)
+        if ampm == "pm" and hour != 12:
+            hour += 12
+        elif ampm == "am" and hour == 12:
+            hour = 0
+        target = now.replace(hour=min(hour, 23), minute=min(minute, 59), second=0, microsecond=0)
+        if target <= now:
+            target += timedelta(days=1)
+        return target
+
+    raise ValueError(f"Cannot parse time expression: '{when}'")
+
+
+def _remind_me(message: str, when: str) -> str:
+    try:
+        remind_at = _parse_reminder_time(when)
+    except ValueError as e:
+        return str(e)
+    from memory import add_reminder
+    rid = add_reminder(message, remind_at.isoformat())
+    local_label = remind_at.strftime("%H:%M UTC")
+    return f"Reminder #{rid} set: '{message}' at {local_label}."
+
+
+def _list_reminders() -> str:
+    from memory import get_upcoming_reminders
+    upcoming = get_upcoming_reminders()
+    if not upcoming:
+        return "No upcoming reminders."
+    lines = []
+    for r in upcoming:
+        dt = r["remind_at"].replace("T", " ")[:16]
+        lines.append(f"• [{r['id']}] {r['message']} — at {dt} UTC")
+    return "\n".join(lines)
+
+
+def _read_clipboard() -> str:
+    try:
+        import pyperclip
+        text = pyperclip.paste()
+        if not text:
+            return "Clipboard is empty."
+        return f"Clipboard contents:\n{text[:2000]}"
+    except Exception as e:
+        return f"Could not read clipboard: {e}"
+
+
+def _write_clipboard(text: str) -> str:
+    try:
+        import pyperclip
+        pyperclip.copy(text)
+        preview = text[:80] + ("..." if len(text) > 80 else "")
+        return f"Copied to clipboard: {preview}"
+    except Exception as e:
+        return f"Could not write to clipboard: {e}"

@@ -66,9 +66,18 @@ async def lifespan(app: FastAPI):
     stop_server = start_trigger_server(callback=lambda msg: _trigger_wake())
     app.state.stop_trigger = stop_server
 
+    # Reminder scheduler
+    reminder_task = asyncio.create_task(_reminder_scheduler())
+    app.state.reminder_task = reminder_task
+
     yield
 
     # Shutdown
+    reminder_task.cancel()
+    try:
+        await reminder_task
+    except asyncio.CancelledError:
+        pass
     if hasattr(app.state, "clap_trigger"):
         app.state.clap_trigger.stop()
     if hasattr(app.state, "keyword_trigger"):
@@ -76,6 +85,31 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, "stop_trigger"):
         app.state.stop_trigger()
     shutdown_browser()
+
+async def _reminder_scheduler():
+    """Check for due reminders every 30 seconds and speak them aloud."""
+    while True:
+        await asyncio.sleep(30)
+        try:
+            from memory import get_due_reminders, mark_reminder_done
+            due = get_due_reminders()
+            for reminder in due:
+                mark_reminder_done(reminder["id"])
+                if active_ws:
+                    msg = f"Reminder: {reminder['message']}"
+                    audio = text_to_speech(msg)
+                    if audio:
+                        await active_ws.send_json({
+                            "type": "audio",
+                            "data": base64.b64encode(audio).decode(),
+                        })
+                    await active_ws.send_json({"type": "status", "text": msg})
+                    log.info("Reminder delivered: %s", reminder["message"])
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            log.warning("Reminder check error: %s", e)
+
 
 def _trigger_wake():
     global active_ws
